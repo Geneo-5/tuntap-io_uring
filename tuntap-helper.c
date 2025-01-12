@@ -32,9 +32,9 @@ void show_buffer(char *buff, size_t count)
 	fprintf(stderr, "%s\n", buffer2);
 }
 
-int open_tuntap(char *name)
+int open_tuntap(char *name, int flags)
 {
-	int fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK | O_CLOEXEC);
+	int fd = open("/dev/net/tun", O_RDWR | O_CLOEXEC | flags);
 	if (fd == -1)
 		return 0;
 	struct ifreq ifr;

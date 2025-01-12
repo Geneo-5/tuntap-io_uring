@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-trap "killall -q tuntap tuntap-uring" EXIT
+trap "killall -q tuntap tuntap-uring" EXIT TERM
 killall -q -w iperf3 tuntap tuntap-uring || true
 
 echo ========================= LOCAL HOST

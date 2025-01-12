@@ -39,7 +39,7 @@
 #define BUFFLEN (4 * 1024)
 
 extern void show_buffer(char *buff, size_t count);
-extern int open_tuntap(char *name);
+extern int open_tuntap(char *name, int flags);
 extern int system_call(const char const **cmds, size_t cnt);
 extern int tuntap_system(void);
 

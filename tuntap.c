@@ -17,19 +17,21 @@ int main(int argc, char** argv)
 	int fd0;
 	int fd1;
 
-	fd0 = open_tuntap("tun0");
+	fd0 = open_tuntap("tun0", O_NONBLOCK);
 	if (!fd0)
 		return 1;
 
-	fd1 = open_tuntap("tun1");
+	fd1 = open_tuntap("tun1", O_NONBLOCK);
 	if (!fd1)
 		return 1;
 
 	if (tuntap_system())
 		return 1;
 
-	if(daemon(0, 0))
-		return 1;
+	if (argc == 1) {
+		if(daemon(0, 1))
+			return 1;
+	}
 
 	while (1) {
 
