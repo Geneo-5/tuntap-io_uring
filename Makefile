@@ -1,12 +1,11 @@
 
 .PHONY: all
-all: tuntap
+all: tuntap tuntap-uring
 
-tuntap: tuntap.c
-	gcc -o tuntap tuntap.c
+tuntap: tuntap.c tuntap-helper.c
+	@echo Build tuntap
+	@gcc -o tuntap tuntap.c tuntap-helper.c
 
-
-.PHONY: test
-test: tuntap
-	sudo ./tuntap
-
+tuntap-uring: tuntap-uring.c tuntap-helper.c
+	@echo Build tuntap-uring
+	@gcc `pkg-config --libs --cflags liburing` -o tuntap-uring tuntap-uring.c tuntap-helper.c
