@@ -26,6 +26,7 @@ static int submit_read(struct io_uring *ring, struct req *req)
 		printf("FULL\n");
 	io_uring_prep_read(sqe, req->fd, req->buffer, sizeof(req->buffer), 0);
 	io_uring_sqe_set_data(sqe, req);
+	//printf("Add read to %p\n", ring);
 }
 
 static int submit_write(struct io_uring *ring, struct req *req)
@@ -38,23 +39,67 @@ static int submit_write(struct io_uring *ring, struct req *req)
 		printf("FULL\n");
 	io_uring_prep_write(sqe, req->fd, req->buffer, req->size, 0);
 	io_uring_sqe_set_data(sqe, req);
+	//printf("Add write to %p\n", ring);
+}
+
+static int
+parse_uring(struct io_uring *ring,
+	    int fd0,
+	    int fd1)
+{
+	struct req          *req;
+	struct io_uring_cqe *cqe;
+
+	int i = 0;
+	int head;
+	io_uring_for_each_cqe(ring, head, cqe) {
+		req = io_uring_cqe_get_data(cqe);
+		switch (req->cmd) {
+		case CMD_READ:
+			if (cqe->res > 0) {
+				req->fd = req->fd == fd0 ? fd1 : fd0;
+				req->size = cqe->res;
+				submit_write(ring, req);
+			} else {
+				submit_read(ring, req);
+			}
+			break;
+		case CMD_WRITE:
+			req->fd = req->fd == fd0 ? fd1 : fd0;
+			submit_read(ring, req);
+			break;
+		default:
+			printf("BAD CMD %02X\n", req->cmd);
+			exit(1);
+		}
+		i++;
+	}
+	io_uring_cq_advance(ring, i);
+	io_uring_submit(ring);
 }
 
 int main(int argc, char** argv)
 {
 	struct io_uring       ring;
-	int                   i;
 	int                   fd0;
 	int                   fd1;
 	struct req           *req0;
 	struct req           *req1;
-	struct io_uring_cqe **cqes;
-
-	fd0 = open_tuntap("tun0", O_NONBLOCK);
+	
+	int flags = 0;
+	if (argc > 1) {
+		//flags = IFF_NAPI | IFF_NAPI_FRAGS;
+		flags = IFF_NAPI;
+		printf("Use NAPI mode\n");
+	}
+	
+	int ff = 0;
+	ff = O_NONBLOCK;
+	fd0 = open_tuntap("tun0", ff, flags);
 	if (!fd0)
 		return 1;
 
-	fd1 = open_tuntap("tun1", O_NONBLOCK);
+	fd1 = open_tuntap("tun1", ff, flags);
 	if (!fd1)
 		return 1;
 
@@ -69,14 +114,10 @@ int main(int argc, char** argv)
 	if (!req1)
 		return 1;
 
-	cqes = malloc(sizeof(*cqes) * NUMBER_BUFF);
-	if (!cqes)
+	if (io_uring_queue_init(NUMBER_BUFF * 4, &ring, 0))
 		return 1;
 
-	if (io_uring_queue_init(QUEUE_DEPTH, &ring, 0))
-		return 1;
-
-	for (i = 0; i < NUMBER_BUFF; i++) {
+	for (int i = 0; i < NUMBER_BUFF; i++) {
 		req0[i].fd = fd0;
 		req1[i].fd = fd1;
 		submit_read(&ring, &req0[i]);
@@ -84,53 +125,13 @@ int main(int argc, char** argv)
 	}
 	io_uring_submit(&ring);
 
-	if (argc == 1) {
+	//if (argc == 1) {
 		if(daemon(0, 1))
 			return 1;
-	}
+	//}
 
 	while (1) {
-		struct req          *req;
-		struct io_uring_cqe *cqe;
-		int cnt;
-
-		if ((cnt = io_uring_peek_batch_cqe(&ring, cqes, QUEUE_DEPTH)) < 0)
-			return 1;
-
-		if (!cnt)
-			continue;
-
-		for (i = 0; i < cnt; i++) {
-			cqe = cqes[i];
-			req = io_uring_cqe_get_data(cqe);
-			switch (req->cmd) {
-			case CMD_READ:
-				if (cqe->res > 0) {
-					req->fd = req->fd == fd0 ? fd1 : fd0;
-					req->size = cqe->res;
-					// show_buffer(req->buffer, req->size);
-					submit_write(&ring, req);
-				} else {
-					// printf("READ syscall return %d\n", cqe->res);
-					submit_read(&ring, req);
-				}
-				break;
-			case CMD_WRITE:
-				if (cqe->res > 0) {
-					req->fd = req->fd == fd0 ? fd1 : fd0;
-					submit_read(&ring, req);
-				} else {
-					// printf("WRITE syscall return %d\n", cqe->res);
-					submit_write(&ring, req);
-				}
-				break;
-			default:
-				printf("BAD CMD %02X\n", req->cmd);
-				return 1;
-			}
-			io_uring_cqe_seen(&ring, cqe);
-		}
-		io_uring_submit(&ring);
+		parse_uring(&ring, fd0, fd1);
 	}
 	return 0;
 }

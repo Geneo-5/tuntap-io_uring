@@ -2,8 +2,10 @@
 
 static const char const* system_cmds[] = {
 	"ip addr add 203.0.113.1/32 dev tun0",
+	"ip link set dev tun0 txqueuelen 10000",
 	"ip link set up dev tun0",
 	"ip addr add 203.0.113.2/32 dev tun1",
+	"ip link set dev tun1 txqueuelen 10000",
 	"ip link set up dev tun1",
 	"ip route add 203.0.113.2/32 dev tun0",
 	"sysctl -w net.ipv4.conf.tun0.accept_local=1",
@@ -32,14 +34,14 @@ void show_buffer(char *buff, size_t count)
 	fprintf(stderr, "%s\n", buffer2);
 }
 
-int open_tuntap(char *name, int flags)
+int open_tuntap(char *name, int flags, int ifr_extra)
 {
 	int fd = open("/dev/net/tun", O_RDWR | O_CLOEXEC | flags);
 	if (fd == -1)
 		return 0;
 	struct ifreq ifr;
 	memset(&ifr, 0, sizeof(ifr));
-	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+	ifr.ifr_flags = IFF_TAP | IFF_NO_PI | ifr_extra;
 	strncpy(ifr.ifr_name, name, IFNAMSIZ);
 	if (ioctl(fd, TUNSETIFF, &ifr) == -1)
 		return 0;
