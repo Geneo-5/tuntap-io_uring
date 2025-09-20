@@ -62,6 +62,6 @@ int system_call(const char const **cmds, size_t cnt)
 
 int tuntap_system(void)
 {
-    return system_call(system_cmds, array_nr(system_cmds));
+	return system_call(system_cmds, array_nr(system_cmds));
 }
 

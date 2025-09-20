@@ -1,8 +1,8 @@
 
-CFLAGS += $(shell pkg-config --libs --cflags liburing)
+CFLAGS += $(shell pkg-config --libs --cflags liburing) -lc
 
 .PHONY: all
-all: tuntap tuntap-uring
+all: tuntap tuntap-uring veth
 
 %: %.c tuntap-helper.c
 	@echo Build $(@)
