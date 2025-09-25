@@ -9,50 +9,19 @@ struct buff {
 
 struct buff buf[1000];
 
-static void
-print_debit(char * prefix, struct timespec tstart,struct timespec tend, size_t nb)
-{
-	double sec;
-	char *unit = "Mio";
-	unsigned long deb = nb;
-
-	sec = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-	      ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
-	sec *= 1000 * 1000;
-	deb *= 1000 * 1000;
-	deb /= (unsigned long)sec;
-	deb /= 1024*1024;
-	printf("%s debit %d%s (%d)\n",prefix, deb, unit, nb);
-}
-
-
 static void read_write(int in, int out)
 {
-	//size_t nb = 0;
-	//struct timespec tstart={0,0}, tend={0,0};
-
-	//clock_gettime(CLOCK_MONOTONIC, &tstart);
 	for (int i = 0; i < 1000; i++) {
 		buf[i].count = read(in, buf[i].buffer, BUFFLEN);
 		if (buf[i].count <= 0)
 			break;
-
-		// show_buffer(buffer, count);
-		//nb += buf[i].count;
 	}
-	//clock_gettime(CLOCK_MONOTONIC, &tend);
-	//print_debit("Read ", tstart, tend, nb);
 
-	//nb = 0;
-	//clock_gettime(CLOCK_MONOTONIC, &tstart);
 	for (int i = 0; i < 1000; i++) {
 		if (buf[i].count <= 0)
 			break;
 		write(out, buf[i].buffer, buf[i].count);
-		//nb += buf[i].count;
 	}
-	//clock_gettime(CLOCK_MONOTONIC, &tend);
-	//print_debit("Write", tstart, tend, nb);
 }
 
 int main(int argc, char** argv)
@@ -96,10 +65,8 @@ int main(int argc, char** argv)
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd1, &ev) == -1)
 		return 1;
 
-	//if (argc == 1) {
-		if(daemon(0, 1))
-			return 1;
-	//}
+	if(daemon(0, 1))
+		return 1;
 
 	while (1) {
 		nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
@@ -113,5 +80,5 @@ int main(int argc, char** argv)
 		}
 	}
 
-    return 0;
+	return 0;
 }

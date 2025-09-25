@@ -1,3 +1,2 @@
-tuntap
-tuntap-uring
+build/
 *.swp

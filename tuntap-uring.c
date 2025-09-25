@@ -26,7 +26,6 @@ static int submit_read(struct io_uring *ring, struct req *req)
 		printf("FULL\n");
 	io_uring_prep_read(sqe, req->fd, req->buffer, sizeof(req->buffer), 0);
 	io_uring_sqe_set_data(sqe, req);
-	//printf("Add read to %p\n", ring);
 }
 
 static int submit_write(struct io_uring *ring, struct req *req)
@@ -39,7 +38,6 @@ static int submit_write(struct io_uring *ring, struct req *req)
 		printf("FULL\n");
 	io_uring_prep_write(sqe, req->fd, req->buffer, req->size, 0);
 	io_uring_sqe_set_data(sqe, req);
-	//printf("Add write to %p\n", ring);
 }
 
 static int
@@ -125,10 +123,8 @@ int main(int argc, char** argv)
 	}
 	io_uring_submit(&ring);
 
-	//if (argc == 1) {
-		if(daemon(0, 1))
-			return 1;
-	//}
+	if(daemon(0, 1))
+		return 1;
 
 	while (1) {
 		parse_uring(&ring, fd0, fd1);
